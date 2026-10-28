@@ -1032,7 +1032,7 @@ var Sync = (function () {
   function fbWrite() { fbMine.updatedAt = Date.now(); return caps.db.doc('rooms/' + fbMine.rc + '/peers/' + tabId).set(fbMine).catch(function () { }); }
 
   /* ---------- Supabase (self-hosted build): window.ARENA_SUPABASE = {url, anonKey} ---------- */
-  var sb = null, chans = {};
+  var sb = null, chans = {}, initErr = '';
   async function initSupabase(cfg) {
     await loadScript('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js');
     sb = window.supabase.createClient(cfg.url, cfg.anonKey, { auth: { persistSession: false, autoRefreshToken: false } });
@@ -1109,9 +1109,12 @@ var Sync = (function () {
   };
 
   async function init() {
-    if (window.ARENA_SUPABASE && window.ARENA_SUPABASE.url) {
-      try { await initSupabase(window.ARENA_SUPABASE); } catch (e) { sb = null; try { console.error(e); } catch (x) { } }
-    }
+    var sc = window.ARENA_SUPABASE;
+    if (sc && sc.url) {
+      if (!/^https:\/\/[a-z0-9-]+\.supabase\.(co|in)\/?$/i.test(String(sc.url).trim())) initErr = 'Supabase url is not a project URL like https://xxxx.supabase.co';
+      else if (!sc.anonKey || String(sc.anonKey).indexOf('PASTE') >= 0) initErr = 'Supabase anonKey is missing';
+      else try { await initSupabase({ url: String(sc.url).trim().replace(/\/$/, ''), anonKey: String(sc.anonKey).trim() }); } catch (e) { sb = null; initErr = 'Supabase library failed to load: ' + (e && e.message || e); try { console.error(e); } catch (x) { } }
+    } else if (!window.ARENA_FIREBASE) initErr = 'No Supabase config found in this page (ARENA_SUPABASE is empty).';
     if (!sb && window.ARENA_FIREBASE && window.ARENA_FIREBASE.projectId) {
       try { await initFirebase(window.ARENA_FIREBASE); } catch (e) { fb = false; caps.db = null; caps.room = null; try { console.error(e); } catch (x) { } }
     }
@@ -1265,7 +1268,7 @@ var Sync = (function () {
   window.addEventListener('beforeunload', function () { try { if (bcCode) bcSend({ t: 'bye' }); } catch (e) { } });
 
   return {
-    init: init, onKind: onKind, kind: function () { return kind; }, me: function () { return myUser; }, tabId: tabId,
+    init: init, onKind: onKind, kind: function () { return kind; }, me: function () { return myUser; }, error: function () { return initErr; }, tabId: tabId,
     chunkPack: chunkPack,
     publish: function (c, m, ch) { return A().publish(c, m, ch); },
     patch: function (c, p) { return A().patch(c, p); },
@@ -1978,7 +1981,7 @@ function roomPanel() {
     var codeIn = h('input', { type: 'text', id: 'joincode', maxlength: 8, placeholder: 'ABCDE', style: { textTransform: 'uppercase', fontFamily: 'var(--f-mono)', letterSpacing: '.2em' }, value: (location.hash.match(/^#r-([A-Za-z0-9]+)/) || [, ''])[1].toUpperCase() });
     return h('div', { class: 'stack', style: { maxWidth: '760px' } },
       h('div', { class: 'hd' }, h('h2', null, t('tab.room')), syncChip()), h('p', { class: 'hint' }, t('room.intro')),
-      Sync.kind() === 'local' ? h('div', { class: 'card flat hint' }, t('sync_local_hint')) : null,
+      Sync.kind() === 'local' ? h('div', { class: 'card flat hint' }, t('sync_local_hint'), Sync.error() ? h('div', { style: { marginTop: '6px', color: 'var(--danger)', fontFamily: 'var(--f-mono)', fontSize: '12px' } }, Sync.error()) : null) : null,
       nameField,
       h('div', { class: 'grid2' },
         h('div', { class: 'card stack' }, h('h3', { style: { fontSize: '26px' } }, t('create_room')), h('p', { class: 'hint' }, t('create_room_hint', { n: totalCount(S.season) })),
