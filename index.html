@@ -249,8 +249,8 @@ hr.sep { border: 0; border-top: 1px solid var(--line); margin: 16px 0; }
 <script>
 /* ===== Supabase config: paste values from Supabase -> Project Settings -> API ===== */
 window.ARENA_SUPABASE = {
-  url: "https://jjuonylcuvcbfvosawtn.supabase.co",
-  anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpqdW9ueWxjdXZjYmZ2b3Nhd3RuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMyMTk4OTEsImV4cCI6MjEwODc5NTg5MX0.rBOfYOHuQeEneQuKHUMAZAseXIwv5FgM1ljZEZESuhs"
+  url: "PASTE_PROJECT_URL",
+  anonKey: "PASTE_ANON_PUBLIC_KEY"
 };
 if (/PASTE_/.test(window.ARENA_SUPABASE.url)) window.ARENA_SUPABASE = null; // not configured -> rooms only work inside one browser
 </script>
@@ -2196,8 +2196,9 @@ function evList(ev, key) {
   if (String(key).indexOf('arena:') === 0) { var sc = ev.arena[+String(key).slice(6)]; return sc ? sc.subs : []; }
   return ev[key] || [];
 }
-function evData() { return S.season.events || HG.defaultEvents(); }
-function ensureCustomEvents() { if (!S.season.events) S.season.events = HG.defaultEvents(); return S.season.events; }
+function fillEvents(e) { var df = HG.defaultEvents(); for (var k in df) if (!Array.isArray(e[k])) e[k] = df[k]; return e; }
+function evData() { return S.season.events ? fillEvents(S.season.events) : HG.defaultEvents(); }
+function ensureCustomEvents() { if (!S.season.events) S.season.events = HG.defaultEvents(); return fillEvents(S.season.events); }
 function validEvent(e) {
   return e && typeof e === 'object' && typeof e.t === 'string' && e.t.length && e.n >= 1 && e.n <= 30 && Array.isArray(e.k) && Array.isArray(e.d);
 }
