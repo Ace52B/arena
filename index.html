@@ -1053,17 +1053,34 @@ var Sync = (function () {
     await loadScript('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js');
     sb = window.supabase.createClient(cfg.url, cfg.anonKey, { auth: { persistSession: false, autoRefreshToken: false } });
   }
+  function sbOpen(code, c) {
+    var ch = sb.channel('arena-room-' + code, { config: { presence: { key: tabId }, broadcast: { self: false } } });
+    c.ch = ch; c.ready = false;
+    ch.on('broadcast', { event: 'changed' }, function () { c.onChange.forEach(function (f) { f(); }); });
+    ch.on('broadcast', { event: 'chat' }, function (p) { c.onChat.forEach(function (f) { f(p && p.payload); }); });
+    ch.on('presence', { event: 'sync' }, function () { c.onPeers.forEach(function (f) { f(); }); });
+    ch.subscribe(function (st, err) {
+      if (c.ch !== ch) return;
+      c.status = st + (err ? ' (' + (err.message || err) + ')' : ''); c.statusAt = Date.now();
+      if (st === 'SUBSCRIBED') { c.ready = true; c.tries = 0; if (c.mine) ch.track(c.mine); c.onPeers.forEach(function (f) { f(); }); c.onChange.forEach(function (f) { f(); }); }
+      else if (st === 'CLOSED' || st === 'CHANNEL_ERROR' || st === 'TIMED_OUT') {
+        c.ready = false;
+        if (c.retry) return;
+        c.retry = setTimeout(function () {
+          c.retry = null;
+          if (chans[code] !== c) return;
+          c.tries = (c.tries || 0) + 1;
+          c.ch = null;
+          try { sb.removeChannel(ch); } catch (e) { }
+          sbOpen(code, c);
+        }, Math.min(1500 * (c.tries + 1), 10000));
+      }
+    });
+  }
   function sbChan(code) {
     if (chans[code]) return chans[code];
-    var c = chans[code] = { ready: false, queue: [], onChange: [], onPeers: [], onChat: [], mine: null };
-    c.ch = sb.channel('arena-room-' + code, { config: { presence: { key: tabId }, broadcast: { self: false } } });
-    c.ch.on('broadcast', { event: 'changed' }, function () { c.onChange.forEach(function (f) { f(); }); });
-    c.ch.on('broadcast', { event: 'chat' }, function (p) { c.onChat.forEach(function (f) { f(p && p.payload); }); });
-    c.ch.on('presence', { event: 'sync' }, function () { c.onPeers.forEach(function (f) { f(); }); });
-    c.ch.subscribe(function (st, err) {
-      c.status = st + (err ? ' (' + (err.message || err) + ')' : ''); c.statusAt = Date.now();
-      if (st === 'SUBSCRIBED') { c.ready = true; if (c.mine) c.ch.track(c.mine); }
-    });
+    var c = chans[code] = { ready: false, queue: [], onChange: [], onPeers: [], onChat: [], mine: null, tries: 0 };
+    sbOpen(code, c);
     return c;
   }
   function sbNotify(code) { var c = sbChan(code); try { c.ch.send({ type: 'broadcast', event: 'changed', payload: {} }); } catch (e) { } }
@@ -1132,7 +1149,7 @@ var Sync = (function () {
     onChat(code, cb) { var c = sbChan(code); c.onChat.push(cb); return function () { c.onChat = c.onChat.filter(function (f) { return f !== cb; }); }; },
     leave(code) {
       var c = chans[code]; if (!c) return Promise.resolve();
-      delete chans[code]; clearInterval(c.beat); if (c.vis) document.removeEventListener('visibilitychange', c.vis);
+      delete chans[code]; clearInterval(c.beat); clearTimeout(c.retry); if (c.vis) document.removeEventListener('visibilitychange', c.vis);
       try { c.ch.untrack(); sb.removeChannel(c.ch); } catch (e) { }
       return Promise.resolve();
     }
