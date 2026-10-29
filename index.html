@@ -1062,9 +1062,9 @@ var Sync = (function () {
     ch.subscribe(function (st, err) {
       if (c.ch !== ch) return;
       c.status = st + (err ? ' (' + (err.message || err) + ')' : ''); c.statusAt = Date.now();
-      if (st === 'SUBSCRIBED') { c.ready = true; c.tries = 0; if (c.mine) ch.track(c.mine); c.onPeers.forEach(function (f) { f(); }); c.onChange.forEach(function (f) { f(); }); }
+      if (st === 'SUBSCRIBED') { c.ready = true; clearTimeout(c.okT); c.okT = setTimeout(function () { c.tries = 0; }, 30000); c.lastJs = ''; sbTrack(c, true); c.onPeers.forEach(function (f) { f(); }); c.onChange.forEach(function (f) { f(); }); }
       else if (st === 'CLOSED' || st === 'CHANNEL_ERROR' || st === 'TIMED_OUT') {
-        c.ready = false;
+        c.ready = false; clearTimeout(c.okT);
         if (c.retry) return;
         c.retry = setTimeout(function () {
           c.retry = null;
@@ -1073,9 +1073,19 @@ var Sync = (function () {
           c.ch = null;
           try { sb.removeChannel(ch); } catch (e) { }
           sbOpen(code, c);
-        }, Math.min(1500 * (c.tries + 1), 10000));
+        }, Math.min(3000 * Math.pow(2, c.tries), 30000));
       }
     });
+  }
+  // presence messages are rate limited by Supabase: send only real changes, at most one per 2 s
+  function sbTrack(c, force) {
+    if (!c.ready || !c.ch || !c.mine) return;
+    var js = JSON.stringify(c.mine);
+    if (!force && js === c.lastJs) return;
+    var wait = 2000 - (Date.now() - (c.lastAt || 0));
+    if (wait > 0 && !force) { if (!c.trk) c.trk = setTimeout(function () { c.trk = null; sbTrack(c, false); }, wait); return; }
+    c.lastJs = js; c.lastAt = Date.now();
+    try { Promise.resolve(c.ch.track(c.mine)).catch(function () { }); } catch (e) { }
   }
   function sbChan(code) {
     if (chans[code]) return chans[code];
@@ -1122,13 +1132,7 @@ var Sync = (function () {
     },
     presence(code, obj) {
       var c = sbChan(code); c.mine = Object.assign({}, c.mine, obj, { rc: code });
-      if (!c.beat) {
-        // keep presence alive: re-announce periodically and when the tab becomes visible again (background tabs get throttled)
-        c.beat = setInterval(function () { if (c.ready && c.mine) { try { c.ch.track(c.mine); } catch (e) { } } }, 8000);
-        c.vis = function () { if (!document.hidden && c.ready && c.mine) { try { c.ch.track(c.mine); } catch (e) { } } };
-        document.addEventListener('visibilitychange', c.vis);
-      }
-      if (c.ready) return Promise.resolve(c.ch.track(c.mine)).catch(function () { });
+      sbTrack(c, false);
       return Promise.resolve();
     },
     onPeers(code, cb) {
@@ -1149,7 +1153,7 @@ var Sync = (function () {
     onChat(code, cb) { var c = sbChan(code); c.onChat.push(cb); return function () { c.onChat = c.onChat.filter(function (f) { return f !== cb; }); }; },
     leave(code) {
       var c = chans[code]; if (!c) return Promise.resolve();
-      delete chans[code]; clearInterval(c.beat); clearTimeout(c.retry); if (c.vis) document.removeEventListener('visibilitychange', c.vis);
+      delete chans[code]; clearTimeout(c.retry); clearTimeout(c.trk); clearTimeout(c.okT);
       try { c.ch.untrack(); sb.removeChannel(c.ch); } catch (e) { }
       return Promise.resolve();
     }
