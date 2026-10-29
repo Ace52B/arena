@@ -1104,34 +1104,24 @@ var Sync = (function () {
     },
     presence(code, obj) {
       var c = sbChan(code); c.mine = Object.assign({}, c.mine, obj, { rc: code });
-      if (!c.beat) {
-        // keep presence alive: re-announce periodically and when the tab becomes visible again (background tabs get throttled)
-        c.beat = setInterval(function () { if (c.ready && c.mine) { try { c.ch.track(c.mine); } catch (e) { } } }, 8000);
-        c.vis = function () { if (!document.hidden && c.ready && c.mine) { try { c.ch.track(c.mine); } catch (e) { } } };
-        document.addEventListener('visibilitychange', c.vis);
-      }
       if (c.ready) return Promise.resolve(c.ch.track(c.mine)).catch(function () { });
       return Promise.resolve();
     },
     onPeers(code, cb) {
       var c = sbChan(code);
-      var seen = {};
       function emit() {
-        var st = c.ch.presenceState(), out = [], now = Date.now();
-        Object.keys(st).forEach(function (k) { var m = st[k][st[k].length - 1] || {}; seen[k] = { key: k, isMe: k === tabId, name: String(m.name || ''), ready: !!m.ready, step: m.step | 0, host: !!m.host, updatedAt: now }; });
-        // grace period: a peer that vanishes for a moment (reconnect, throttled tab) stays listed for 25 s
-        Object.keys(seen).forEach(function (k) { if (now - seen[k].updatedAt < 25000) out.push(seen[k]); else delete seen[k]; });
+        var st = c.ch.presenceState(), out = [];
+        Object.keys(st).forEach(function (k) { var m = st[k][st[k].length - 1] || {}; out.push({ key: k, isMe: k === tabId, name: String(m.name || ''), ready: !!m.ready, step: m.step | 0, host: !!m.host, updatedAt: Date.now() }); });
         cb(out);
       }
-      var gt = setInterval(emit, 5000);
       c.onPeers.push(emit); emit();
-      return function () { clearInterval(gt); c.onPeers = c.onPeers.filter(function (f) { return f !== emit; }); };
+      return function () { c.onPeers = c.onPeers.filter(function (f) { return f !== emit; }); };
     },
     chatSend(code, m) { var c = sbChan(code); return Promise.resolve(c.ch.send({ type: 'broadcast', event: 'chat', payload: m })); },
     onChat(code, cb) { var c = sbChan(code); c.onChat.push(cb); return function () { c.onChat = c.onChat.filter(function (f) { return f !== cb; }); }; },
     leave(code) {
       var c = chans[code]; if (!c) return Promise.resolve();
-      delete chans[code]; clearInterval(c.beat); if (c.vis) document.removeEventListener('visibilitychange', c.vis);
+      delete chans[code];
       try { c.ch.untrack(); sb.removeChannel(c.ch); } catch (e) { }
       return Promise.resolve();
     }
