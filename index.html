@@ -1603,7 +1603,7 @@ function phHead(p, sim, extra) {
         var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
         c = S.cnt[key] = { t0: Date.now() + 1300, dur: reduce ? 0 : Math.min(1600, 600 + (from - to) * 70), from: from, to: to };
         startCount(key);
-        if (window.scrollY > 40) setTimeout(function () { window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' }); }, 60);
+        if (window.scrollY > 40) { S.topUntil = Date.now() + 1500; window.scrollTo(0, 0); }
       }
       shown = c ? countValue(c) : from;
       if (c && !c.running && !c.finished) startCount(key);
@@ -1923,7 +1923,7 @@ function onRoomMeta(meta) {
     if (prev && prev.status !== 'live') S.tab = 'game';
   } else if (meta.status === 'lobby') { S.revealed = 0; S.cur = 0; if (prev && prev.status === 'live') { S.ready = false; pushPresence(); } }
   render();
-  if (toTop && window.scrollY > 40) window.scrollTo({ top: 0, behavior: (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) ? 'auto' : 'smooth' });
+  if (toTop) { S.topUntil = Date.now() + 1500; window.scrollTo(0, 0); setTimeout(function () { window.scrollTo(0, 0); }, 120); }
 }
 function onRoomPack(pack) {
   var r = S.room; if (!r || r.host) return;
@@ -2655,7 +2655,7 @@ var rendering = false;
 function render() {
   if (!S.season || rendering) return;
   rendering = true;
-  var root = $('#app'), ae = document.activeElement, fid = ae && ae.id, sel = null, sy = window.scrollY;
+  var root = $('#app'), ae = document.activeElement, fid = ae && ae.id, sel = null, sy = (S.topUntil && Date.now() < S.topUntil) ? 0 : window.scrollY;
   if (fid && ae.selectionStart != null) { try { sel = [ae.selectionStart, ae.selectionEnd]; } catch (e) { } }
   try {
     var shell = h('div', { class: 'shell' }, topbar(), h('main', { id: 'main' }, currentView()));
