@@ -1060,7 +1060,8 @@ var Sync = (function () {
     c.ch.on('broadcast', { event: 'changed' }, function () { c.onChange.forEach(function (f) { f(); }); });
     c.ch.on('broadcast', { event: 'chat' }, function (p) { c.onChat.forEach(function (f) { f(p && p.payload); }); });
     c.ch.on('presence', { event: 'sync' }, function () { c.onPeers.forEach(function (f) { f(); }); });
-    c.ch.subscribe(function (st) {
+    c.ch.subscribe(function (st, err) {
+      c.status = st + (err ? ' (' + (err.message || err) + ')' : ''); c.statusAt = Date.now();
       if (st === 'SUBSCRIBED') { c.ready = true; if (c.mine) c.ch.track(c.mine); }
     });
     return c;
@@ -1104,24 +1105,34 @@ var Sync = (function () {
     },
     presence(code, obj) {
       var c = sbChan(code); c.mine = Object.assign({}, c.mine, obj, { rc: code });
+      if (!c.beat) {
+        // keep presence alive: re-announce periodically and when the tab becomes visible again (background tabs get throttled)
+        c.beat = setInterval(function () { if (c.ready && c.mine) { try { c.ch.track(c.mine); } catch (e) { } } }, 8000);
+        c.vis = function () { if (!document.hidden && c.ready && c.mine) { try { c.ch.track(c.mine); } catch (e) { } } };
+        document.addEventListener('visibilitychange', c.vis);
+      }
       if (c.ready) return Promise.resolve(c.ch.track(c.mine)).catch(function () { });
       return Promise.resolve();
     },
     onPeers(code, cb) {
       var c = sbChan(code);
+      var seen = {};
       function emit() {
-        var st = c.ch.presenceState(), out = [];
-        Object.keys(st).forEach(function (k) { var m = st[k][st[k].length - 1] || {}; out.push({ key: k, isMe: k === tabId, name: String(m.name || ''), ready: !!m.ready, step: m.step | 0, host: !!m.host, updatedAt: Date.now() }); });
+        var st = c.ch.presenceState(), out = [], now = Date.now();
+        Object.keys(st).forEach(function (k) { var m = st[k][st[k].length - 1] || {}; seen[k] = { key: k, isMe: k === tabId, name: String(m.name || ''), ready: !!m.ready, step: m.step | 0, host: !!m.host, updatedAt: now }; });
+        // grace period: a peer that vanishes for a moment (reconnect, throttled tab) stays listed for 25 s
+        Object.keys(seen).forEach(function (k) { if (now - seen[k].updatedAt < 25000) out.push(seen[k]); else delete seen[k]; });
         cb(out);
       }
+      var gt = setInterval(emit, 5000);
       c.onPeers.push(emit); emit();
-      return function () { c.onPeers = c.onPeers.filter(function (f) { return f !== emit; }); };
+      return function () { clearInterval(gt); c.onPeers = c.onPeers.filter(function (f) { return f !== emit; }); };
     },
     chatSend(code, m) { var c = sbChan(code); return Promise.resolve(c.ch.send({ type: 'broadcast', event: 'chat', payload: m })); },
     onChat(code, cb) { var c = sbChan(code); c.onChat.push(cb); return function () { c.onChat = c.onChat.filter(function (f) { return f !== cb; }); }; },
     leave(code) {
       var c = chans[code]; if (!c) return Promise.resolve();
-      delete chans[code];
+      delete chans[code]; clearInterval(c.beat); if (c.vis) document.removeEventListener('visibilitychange', c.vis);
       try { c.ch.untrack(); sb.removeChannel(c.ch); } catch (e) { }
       return Promise.resolve();
     }
@@ -1292,7 +1303,7 @@ var Sync = (function () {
   window.addEventListener('beforeunload', function () { try { if (bcCode) bcSend({ t: 'bye' }); } catch (e) { } });
 
   return {
-    init: init, onKind: onKind, kind: function () { return kind; }, me: function () { return myUser; }, error: function () { return initErr; }, tabId: tabId,
+    init: init, onKind: onKind, kind: function () { return kind; }, me: function () { return myUser; }, debug: function (code) { var c = chans[code]; return sb ? 'supabase · channel: ' + (c ? c.status || 'connecting' : 'none') + (c && c.statusAt ? ' (' + Math.round((Date.now() - c.statusAt) / 1000) + 's ago)' : '') + ' · tab ' + tabId : kind; }, error: function () { return initErr; }, tabId: tabId,
     chunkPack: chunkPack,
     publish: function (c, m, ch) { return A().publish(c, m, ch); },
     patch: function (c, p) { return A().patch(c, p); },
@@ -2026,6 +2037,7 @@ function roomPanel() {
     r.host ? h('div', { class: 'row' }, h('button', { class: 'btn', onclick: function () { copyText(r.code); } }, t('copy_code')), h('button', { class: 'btn', onclick: function () { copyText(link); } }, t('copy_link'))) : null,
     r.host ? h('p', { class: 'hint', style: { maxWidth: '52ch' } }, t('share_hint', { code: r.code })) : null,
     !m && !r.notFound ? h('p', { class: 'hint' }, t('connecting')) : null,
+    h('div', { class: 'hint', style: { fontFamily: 'var(--f-mono)', fontSize: '11px', opacity: .75 } }, Sync.debug(r.code) + ' · peers: ' + r.peers.map(function (p) { return (p.host ? 'H:' : 'V:') + (p.name || '?') + (p.ready ? '✓' : ''); }).join(', ')),
     r.notFound ? h('p', { class: 'hint', style: { color: 'var(--danger)' } }, t('room_not_found')) : null,
     closed ? h('p', { class: 'hint' }, t('room_closed')) : null);
   var ctrl = [];
