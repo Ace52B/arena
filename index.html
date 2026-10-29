@@ -243,6 +243,22 @@ hr.sep { border: 0; border-top: 1px solid var(--line); margin: 16px 0; }
 .colorpick.unset i { background: repeating-linear-gradient(45deg, var(--surface2) 0 4px, var(--surface) 4px 8px) !important; }
 .colorcell { display: flex; align-items: center; gap: 2px; }
 
+/* chat */
+.chat { position: fixed; right: 12px; bottom: calc(86px + env(safe-area-inset-bottom, 0px)); z-index: 60; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.chat-fab { position: relative; border: 1px solid var(--line2); background: var(--surface); color: var(--ink); font: 600 14px var(--f-body); padding: 10px 14px; border-radius: 999px; box-shadow: var(--shadow); cursor: pointer; }
+.chat-fab:hover { border-color: var(--accent); }
+.chat-badge { position: absolute; top: -6px; right: -4px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px; background: var(--accent); color: var(--accent-ink); font: 700 12px/20px var(--f-body); text-align: center; }
+.chat-panel { display: none; flex-direction: column; width: min(340px, calc(100vw - 24px)); height: min(420px, 60vh); background: var(--surface); border: 1px solid var(--line2); border-radius: var(--r); box-shadow: var(--shadow); overflow: hidden; }
+.chat[data-open="1"] .chat-panel { display: flex; }
+.chat-head { display: flex; align-items: center; justify-content: space-between; padding: 6px 8px 6px 12px; border-bottom: 1px solid var(--line); }
+.chat-list { flex: 1; overflow-y: auto; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; }
+.chat-msg { font-size: 14px; line-height: 1.35; overflow-wrap: anywhere; }
+.chat-msg .who { font-weight: 700; margin-right: 6px; }
+.chat-msg.mine .who { opacity: .85; }
+.chat-form { display: flex; gap: 6px; padding: 8px; border-top: 1px solid var(--line); }
+.chat-form input { flex: 1; min-width: 0; min-height: 36px; padding: 6px 10px; font-size: 16px; }
+@media (max-width: 600px) { .chat { right: 8px; } }
+
 </style>
 </head><body>
 <div id="app"></div>
@@ -279,7 +295,7 @@ cast_sub:'Up to 200 tributes', 'cast.sub':'Up to 1000 tributes in 1–1000 distr
 killers:'Killers', killer:'Killer', dies:'Dies', mood:'Mood', 'mood.n':'Any','mood.f':'Friendly','mood.h':'Hostile', event_text:'Event text', tributes_involved:'Tributes', event_slots_hint:'Mark who kills and who dies. Fatal events move to the fatal list.', event_need1:'The text must contain {1}.', need_line:'Add at least one line to each list.',
 'arena.hint':'Each scenario has an intro line and its own events. Deaths happen only among tributes caught in the arena event.','finale.hint':'One line per outcome. Use {list} for the names.','finale.win':'Shared victory lines','finale.die':'Nobody survives lines',
 syntax_title:'Text syntax', syntax_body:'Use {1} to {30} for tributes. The number after a pronoun says which tribute it refers to, and the pronoun follows that tribute\'s gender from the cast.', 'syn.name':'Tribute name. The number is the tribute\'s place in the event: {1} first, {2} second, and so on.','syn.pron':'Pronouns that follow the gender: {he1} → he / she / they, {his1} → his / her / their, {him1} → him / her / them, {himself1} → himself / herself / themselves.','syn.cap':'Capital first letter for the start of a sentence: {He1} → He / She / They.','syn.verb':'Verb endings: run{s1} → runs (he, she, it) or run (they); watch{es1} → watches or watch.','syn.be':'is / was / has','syn.v':'Any other verb. Write the form for “they” first, then the form for he / she / it: {v1:try:tries} → tries (he, she), try (they).',
-'ally_switch':'Members are allies','ally_hint':'Tributes of this district start as allies of each other. Manual relationships override it.','rel.team':'Teams (districts)','rel.person':'Individuals','rel.sub':'Who likes whom','rel.explain':'Relationships steer who meets whom in events: friends and allies team up, enemies fight. Team relations apply between whole districts, individual ones override them. Non-mutual means only one side feels it; permanent means it never drifts.',
+chat:'Chat', chat_ph:'Write a message…', chat_send:'Send', chat_close:'Close chat', chat_empty:'No messages yet. Say hi!', chat_host:'host', 'ally_switch':'Members are allies','ally_hint':'Tributes of this district start as allies of each other. Manual relationships override it.','rel.team':'Teams (districts)','rel.person':'Individuals','rel.sub':'Who likes whom','rel.explain':'Relationships steer who meets whom in events: friends and allies team up, enemies fight. Team relations apply between whole districts, individual ones override them. Non-mutual means only one side feels it; permanent means it never drifts.',
 'rel.count_team':'{n} team','rel.count_person':'{n} individual','rel.randomize':'Randomize','rel.reset_all':'Clear all','rel.reset_one':'Clear this tribute','rel.pick_team':'District','rel.pick_tribute':'Tribute','rel.within':'{n} (itself)','rel.from_team':'from team','rel.nm':'Non-mutual','rel.perm':'Permanent','rel.nm_hint':'Only applies in one direction','rel.perm_hint':'Never changes during the game', search:'Search', all_districts:'All districts',
 'lvl.enemy':'Enemy','lvl.rival':'Rival','lvl.neutral':'Neutral','lvl.friend':'Friend','lvl.ally':'Ally','lvl.couple':'Couple',
 'settings.sub':'Tune the game','set.deaths':'Deaths','set.death_rate':'Death rate per day','set.death_rate_hint':'Share of living tributes lost in one day and night.','preset.low':'Low','preset.mid':'Medium','preset.high':'High','preset.brutal':'Very high','set.bb_rate':'Bloodbath deaths','set.bb_rate_hint':'Share lost in the opening bloodbath.',
@@ -321,7 +337,7 @@ name:'Meno', nick:'Prezývka', gender:'Pohlavie', 'g.m':'Muž','g.f':'Žena','g.
 killers:'Vrahovia', killer:'Zabíja', dies:'Zomiera', mood:'Nálada', 'mood.n':'Akákoľvek','mood.f':'Priateľská','mood.h':'Nepriateľská', event_text:'Text udalosti', tributes_involved:'Tribúti', event_slots_hint:'Označ, kto zabíja a kto zomiera. Smrteľné udalosti sa presunú do zoznamu smrteľných.', event_need1:'Text musí obsahovať {1}.', need_line:'Pridaj aspoň jeden riadok do každého zoznamu.',
 'arena.hint':'Každý scenár má úvodný text a vlastné udalosti. Zomierajú len tribúti zasiahnutí udalosťou arény.','finale.hint':'Jeden riadok = jeden výsledok. Pre mená použi {list}.','finale.win':'Riadky spoločného víťazstva','finale.die':'Riadky „nikto neprežije“',
 syntax_title:'Syntax textu', syntax_body:'Pre tribútov použi {1} až {30}. Číslo za zámenom určuje, ktorého tribúta sa týka, a zámeno sa prispôsobí jeho pohlaviu z obsadenia.', 'syn.name':'Meno tribúta. Číslo je poradie tribúta v udalosti: {1} prvý, {2} druhý atď.','syn.pron':'Zámená podľa pohlavia: {he1} → he / she / they, {his1} → his / her / their, {him1} → him / her / them, {himself1} → himself / herself / themselves.','syn.cap':'Veľké prvé písmeno na začiatku vety: {He1} → He / She / They.','syn.verb':'Koncovky slovies: run{s1} → runs (he, she, it) alebo run (they); watch{es1} → watches alebo watch.','syn.be':'is / was / has','syn.v':'Akékoľvek iné sloveso. Najprv napíš tvar pre „they“, potom tvar pre he / she / it: {v1:try:tries} → tries (he, she), try (they).',
-'ally_switch':'Členovia sú spojenci','ally_hint':'Tribúti tohto dištriktu sú od začiatku navzájom spojenci. Ručné vzťahy to prepíšu.','rel.team':'Tímy (dištrikty)','rel.person':'Jednotlivci','rel.sub':'Kto koho má rád','rel.explain':'Vzťahy ovplyvňujú, kto sa v udalostiach stretne s kým: priatelia a spojenci sa spoja, nepriatelia bojujú. Tímové vzťahy platia medzi celými dištriktmi, individuálne ich prebíjajú. Nevzájomný znamená, že to cíti len jedna strana; trvalý sa počas hry nemení.',
+chat:'Chat', chat_ph:'Napíš správu…', chat_send:'Odoslať', chat_close:'Zavrieť chat', chat_empty:'Zatiaľ žiadne správy. Pozdrav ostatných!', chat_host:'hostiteľ', 'ally_switch':'Členovia sú spojenci','ally_hint':'Tribúti tohto dištriktu sú od začiatku navzájom spojenci. Ručné vzťahy to prepíšu.','rel.team':'Tímy (dištrikty)','rel.person':'Jednotlivci','rel.sub':'Kto koho má rád','rel.explain':'Vzťahy ovplyvňujú, kto sa v udalostiach stretne s kým: priatelia a spojenci sa spoja, nepriatelia bojujú. Tímové vzťahy platia medzi celými dištriktmi, individuálne ich prebíjajú. Nevzájomný znamená, že to cíti len jedna strana; trvalý sa počas hry nemení.',
 'rel.count_team':'{n} tímových','rel.count_person':'{n} individuálnych','rel.randomize':'Náhodne','rel.reset_all':'Zmazať všetky','rel.reset_one':'Zmazať tohto tribúta','rel.pick_team':'Dištrikt','rel.pick_tribute':'Tribút','rel.within':'{n} (sám v sebe)','rel.from_team':'z tímu','rel.nm':'Nevzájomný','rel.perm':'Trvalý','rel.nm_hint':'Platí len jedným smerom','rel.perm_hint':'Počas hry sa nemení', search:'Hľadať', all_districts:'Všetky dištrikty',
 'lvl.enemy':'Nepriateľ','lvl.rival':'Rival','lvl.neutral':'Neutrálny','lvl.friend':'Priateľ','lvl.ally':'Spojenec','lvl.couple':'Pár',
 'settings.sub':'Doladiť hru','set.deaths':'Úmrtia','set.death_rate':'Úmrtnosť za deň','set.death_rate_hint':'Podiel žijúcich tribútov, ktorí zomrú za deň a noc.','preset.low':'Nízka','preset.mid':'Stredná','preset.high':'Vysoká','preset.brutal':'Veľmi vysoká','set.bb_rate':'Obete krvavého mora','set.bb_rate_hint':'Podiel strát v úvodnom krvavom mori.',
@@ -1039,9 +1055,10 @@ var Sync = (function () {
   }
   function sbChan(code) {
     if (chans[code]) return chans[code];
-    var c = chans[code] = { ready: false, queue: [], onChange: [], onPeers: [], mine: null };
+    var c = chans[code] = { ready: false, queue: [], onChange: [], onPeers: [], onChat: [], mine: null };
     c.ch = sb.channel('arena-room-' + code, { config: { presence: { key: tabId }, broadcast: { self: false } } });
     c.ch.on('broadcast', { event: 'changed' }, function () { c.onChange.forEach(function (f) { f(); }); });
+    c.ch.on('broadcast', { event: 'chat' }, function (p) { c.onChat.forEach(function (f) { f(p && p.payload); }); });
     c.ch.on('presence', { event: 'sync' }, function () { c.onPeers.forEach(function (f) { f(); }); });
     c.ch.subscribe(function (st) {
       if (st === 'SUBSCRIBED') { c.ready = true; if (c.mine) c.ch.track(c.mine); }
@@ -1100,6 +1117,8 @@ var Sync = (function () {
       c.onPeers.push(emit); emit();
       return function () { c.onPeers = c.onPeers.filter(function (f) { return f !== emit; }); };
     },
+    chatSend(code, m) { var c = sbChan(code); return Promise.resolve(c.ch.send({ type: 'broadcast', event: 'chat', payload: m })); },
+    onChat(code, cb) { var c = sbChan(code); c.onChat.push(cb); return function () { c.onChat = c.onChat.filter(function (f) { return f !== cb; }); }; },
     leave(code) {
       var c = chans[code]; if (!c) return Promise.resolve();
       delete chans[code];
@@ -1175,6 +1194,8 @@ var Sync = (function () {
       }, onErr);
       return function () { u1(); u2(); };
     },
+    chatSend(code, m) { return caps.db.doc('rooms/' + code + '/chat/' + m.id).set(m); },
+    onChat(code, cb) { return caps.db.collection('rooms/' + code + '/chat').onSnapshot(function (q) { q.docs.forEach(function (d) { cb(d.data()); }); }, function () { }); },
     presence(code, obj) {
       if (fb) {
         fbMine = Object.assign({}, fbMine, obj, { rc: code });
@@ -1207,7 +1228,7 @@ var Sync = (function () {
   };
 
   /* ---------- local adapter ---------- */
-  var bc = null, localPeers = {}, localCb = {}, myPresence = {}, bcCode = null, watchers = {};
+  var bc = null, chatCb = {}, localPeers = {}, localCb = {}, myPresence = {}, bcCode = null, watchers = {};
   function lsGet(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }
   function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } }
   function bcSend(m) { if (bc) bc.postMessage(Object.assign({ from: tabId }, m)); }
@@ -1220,6 +1241,7 @@ var Sync = (function () {
       if (m.t === 'meta') { if (watchers[code]) watchers[code].meta(); }
       else if (m.t === 'pack') { if (watchers[code]) watchers[code].pack(); }
       else if (m.t === 'presence') { localPeers[m.from] = Object.assign({ key: m.from, isMe: false, at: Date.now() }, m.data); fire(code); }
+      else if (m.t === 'chat') { if (chatCb[code]) chatCb[code](m.m); }
       else if (m.t === 'bye') { delete localPeers[m.from]; fire(code); }
       else if (m.t === 'hello') { if (myPresence.rc === code) bcSend({ t: 'presence', data: myPresence }); }
     };
@@ -1261,6 +1283,8 @@ var Sync = (function () {
       ensureBc(code); localCb[code] = cb; bcSend({ t: 'hello' }); fire(code);
       return function () { delete localCb[code]; };
     },
+    chatSend(code, m) { ensureBc(code); bcSend({ t: 'chat', m: m }); return Promise.resolve(); },
+    onChat(code, cb) { ensureBc(code); chatCb[code] = cb; return function () { delete chatCb[code]; }; },
     leave(code) { bcSend({ t: 'bye' }); myPresence = {}; localPeers = {}; return Promise.resolve(); }
   };
 
@@ -1275,7 +1299,9 @@ var Sync = (function () {
     watch: function (c, a, b, e) { return A().watch(c, a, b, e); },
     presence: function (c, o) { return A().presence(c, o); },
     onPeers: function (c, f) { return A().onPeers(c, f); },
-    leave: function (c) { return A().leave(c); }
+    leave: function (c) { return A().leave(c); },
+    chatSend: function (c, m) { return A().chatSend(c, m); },
+    onChat: function (c, f) { return A().onChat(c, f); }
   };
 })();
 
@@ -1863,6 +1889,7 @@ function attachRoom() {
   var r = S.room, code = r.code;
   r.unwatch = Sync.watch(code, onRoomMeta, onRoomPack, function () { toast(t('room_err')); });
   r.unpeers = Sync.onPeers(code, function (peers) { if (!S.room || S.room.code !== code) return; S.room.peers = peers; onPeersChanged(); });
+  chatStart(code);
   pushPresence();
   if (r.timer) clearInterval(r.timer);
   r.timer = setInterval(roomTick, 500);
@@ -1879,7 +1906,7 @@ function ensureRoomSim() {
 }
 function onRoomMeta(meta) {
   var r = S.room; if (!r) return;
-  var prev = r.meta; r.meta = meta;
+  var prev = r.meta; r.meta = meta; var toTop = false;
   if (!meta) { render(); return; }
   r.notFound = false;
   if (meta.status === 'closed' && !r.host) { render(); return; }
@@ -1891,10 +1918,12 @@ function onRoomMeta(meta) {
     S.revealed = clampN(meta.step | 0, 0, S.sim.phases.length - 1);
     if (changedSeed) S.cur = 0;
     if (follow) S.cur = S.revealed;
+    if (follow && prev && (prev.step !== meta.step || changedSeed)) toTop = true;
     if (!prev || prev.step !== meta.step || changedSeed) { S.ready = false; pushPresence(); }
     if (prev && prev.status !== 'live') S.tab = 'game';
   } else if (meta.status === 'lobby') { S.revealed = 0; S.cur = 0; if (prev && prev.status === 'live') { S.ready = false; pushPresence(); } }
   render();
+  if (toTop && window.scrollY > 40) window.scrollTo({ top: 0, behavior: (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) ? 'auto' : 'smooth' });
 }
 function onRoomPack(pack) {
   var r = S.room; if (!r || r.host) return;
@@ -1950,7 +1979,7 @@ async function hostRefreshCast() {
 function setReady(flag) { S.ready = flag; pushPresence(); render(); }
 function leaveRoom(silent) {
   var r = S.room; if (!r) return;
-  clearInterval(r.timer);
+  clearInterval(r.timer); chatStop();
   try { r.unwatch && r.unwatch(); r.unpeers && r.unpeers(); } catch (e) { }
   if (r.host) { try { Sync.patch(r.code, { status: 'closed', deadline: null }); } catch (e) { } }
   Sync.leave(r.code);
@@ -2056,6 +2085,64 @@ function actionBar() {
     if (room.host && rev >= last) items.push(h('button', { class: 'btn', onclick: hostNewGame }, t('new_game_room')));
   }
   return h('div', { class: 'actionbar' }, h('div', { class: 'inner' }, items));
+}
+
+/* ---------- chat ---------- */
+var CHAT = { open: false, msgs: [], ids: {}, unread: 0, un: null, code: null, last: 0, built: false };
+function chatStart(code) { chatStop(); CHAT.code = code; try { CHAT.un = Sync.onChat(code, chatIn); } catch (e) { } chatRender(); }
+function chatStop() {
+  if (CHAT.un) { try { CHAT.un(); } catch (e) { } }
+  CHAT.un = null; CHAT.code = null; CHAT.msgs = []; CHAT.ids = {}; CHAT.unread = 0; CHAT.open = false; chatRender();
+}
+function chatIn(m) {
+  if (!m || !m.id || CHAT.ids[m.id] || typeof m.text !== 'string' || !m.text.trim()) return;
+  CHAT.ids[m.id] = 1;
+  var mine = m.tab === Sync.tabId;
+  CHAT.msgs.push({ id: m.id, name: String(m.name || '').slice(0, 24), text: m.text.slice(0, 300), at: +m.at || Date.now(), host: !!m.host, mine: mine });
+  CHAT.msgs.sort(function (a, b) { return a.at - b.at; });
+  if (CHAT.msgs.length > 200) CHAT.msgs = CHAT.msgs.slice(-200);
+  if (!CHAT.open && !mine) CHAT.unread++;
+  chatRender();
+}
+function chatSendText(text) {
+  text = String(text || '').trim().slice(0, 300);
+  if (!text || !CHAT.code || Date.now() - CHAT.last < 700) return false;
+  CHAT.last = Date.now();
+  var m = { id: uid(10), name: myName(), text: text, at: Date.now(), host: !!(S.room && S.room.host), tab: Sync.tabId };
+  chatIn(m);
+  Promise.resolve(Sync.chatSend(CHAT.code, m)).catch(function () { toast(t('room_err')); });
+  return true;
+}
+function chatColor(name) { var x = 0; for (var i = 0; i < name.length; i++) x = (x * 31 + name.charCodeAt(i)) % 360; return 'hsl(' + x + ',65%,60%)'; }
+function chatBuild() {
+  var el = document.createElement('div'); el.id = 'chat'; el.className = 'chat';
+  var input = h('input', { type: 'text', id: 'chatin', maxlength: 300, autocomplete: 'off' });
+  var form = h('form', { class: 'chat-form', onsubmit: function (e) { e.preventDefault(); if (chatSendText(input.value)) input.value = ''; input.focus(); } }, input, h('button', { class: 'btn primary sm', type: 'submit', id: 'chatsend' }));
+  var fab = h('button', { class: 'chat-fab', id: 'chatfab', type: 'button', onclick: function () { CHAT.open = !CHAT.open; if (CHAT.open) CHAT.unread = 0; chatRender(true); if (CHAT.open) setTimeout(function () { var i = document.getElementById('chatin'); if (i) i.focus({ preventScroll: true }); }, 30); } });
+  var panel = h('div', { class: 'chat-panel', role: 'dialog', id: 'chatpanel' },
+    h('div', { class: 'chat-head' }, h('b', { id: 'chattitle' }), h('button', { class: 'btn ghost sm icon-btn', id: 'chatclose', type: 'button', onclick: function () { CHAT.open = false; chatRender(); } }, '✕')),
+    h('div', { class: 'chat-list', id: 'chatlist', 'aria-live': 'polite' }), form);
+  el.appendChild(panel); el.appendChild(fab); document.body.appendChild(el); return el;
+}
+function chatRender(stick) {
+  var el = document.getElementById('chat');
+  if (!CHAT.code) { if (el) el.style.display = 'none'; return; }
+  if (!el) el = chatBuild();
+  el.style.display = '';
+  el.setAttribute('data-open', CHAT.open ? '1' : '0');
+  var fab = document.getElementById('chatfab'); fab.textContent = '';
+  fab.appendChild(document.createTextNode('💬 ' + t('chat')));
+  if (CHAT.unread > 0 && !CHAT.open) fab.appendChild(h('span', { class: 'chat-badge' }, String(Math.min(CHAT.unread, 99))));
+  document.getElementById('chattitle').textContent = t('chat');
+  document.getElementById('chatclose').setAttribute('aria-label', t('chat_close'));
+  document.getElementById('chatsend').textContent = t('chat_send');
+  document.getElementById('chatin').setAttribute('placeholder', t('chat_ph'));
+  var list = document.getElementById('chatlist'), near = list.scrollHeight - list.scrollTop - list.clientHeight < 60;
+  list.replaceChildren.apply(list, CHAT.msgs.length ? CHAT.msgs.map(function (m) {
+    return h('div', { class: 'chat-msg' + (m.mine ? ' mine' : '') },
+      h('span', { class: 'who', style: { color: chatColor(m.name) } }, m.name || t('guest'), m.host ? h('span', { class: 'chip', style: { marginLeft: '6px' } }, t('chat_host')) : null), h('span', { class: 'txt' }, m.text));
+  }) : [h('div', { class: 'hint', style: { padding: '12px' } }, t('chat_empty'))]);
+  if (near || stick || CHAT.open) list.scrollTop = list.scrollHeight;
 }
 
 ;
