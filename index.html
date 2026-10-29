@@ -1063,18 +1063,7 @@ var Sync = (function () {
       if (c.ch !== ch) return;
       c.status = st + (err ? ' (' + (err.message || err) + ')' : ''); c.statusAt = Date.now();
       if (st === 'SUBSCRIBED') { c.ready = true; clearTimeout(c.okT); c.okT = setTimeout(function () { c.tries = 0; }, 30000); c.lastJs = ''; sbTrack(c, true); c.onPeers.forEach(function (f) { f(); }); c.onChange.forEach(function (f) { f(); }); }
-      else if (st === 'CLOSED' || st === 'CHANNEL_ERROR' || st === 'TIMED_OUT') {
-        c.ready = false; clearTimeout(c.okT);
-        if (c.retry) return;
-        c.retry = setTimeout(function () {
-          c.retry = null;
-          if (chans[code] !== c) return;
-          c.tries = (c.tries || 0) + 1;
-          c.ch = null;
-          try { sb.removeChannel(ch); } catch (e) { }
-          sbOpen(code, c);
-        }, Math.min(3000 * Math.pow(2, c.tries), 30000));
-      }
+      else { c.ready = false; clearTimeout(c.okT); }
     });
   }
   // presence messages are rate limited by Supabase: send only real changes, at most one per 2 s
@@ -1082,7 +1071,7 @@ var Sync = (function () {
     if (!c.ready || !c.ch || !c.mine) return;
     var js = JSON.stringify(c.mine);
     if (!force && js === c.lastJs) return;
-    var wait = 2000 - (Date.now() - (c.lastAt || 0));
+    var wait = 5000 - (Date.now() - (c.lastAt || 0));
     if (wait > 0 && !force) { if (!c.trk) c.trk = setTimeout(function () { c.trk = null; sbTrack(c, false); }, wait); return; }
     c.lastJs = js; c.lastAt = Date.now();
     try { Promise.resolve(c.ch.track(c.mine)).catch(function () { }); } catch (e) { }
